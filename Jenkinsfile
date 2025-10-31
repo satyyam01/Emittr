@@ -37,11 +37,12 @@ pipeline {
         }
 
         stage('Package Docker Image') {
-            steps {
-                echo '🐳 Building Docker image...'
-                sh 'docker build -t ${IMAGE_NAME}:latest .'
+          steps {
+            echo "🐳 Building Docker image..."
+            sh 'docker build -t emittr-app:latest ./backend'
             }
         }
+
 
         stage('Deploy Container') {
             steps {
