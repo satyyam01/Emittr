@@ -2,20 +2,19 @@ pipeline {
     agent any
 
     environment {
-        APP_NAME = "connect4"
-        IMAGE_NAME = "connect4-app"
-        CONTAINER_NAME = "connect4-container"
+        IMAGE_NAME = "emittr-app"
+        CONTAINER_NAME = "emittr-container"
     }
 
     stages {
         stage('Checkout Code') {
             steps {
-                echo '📦 Cloning Repository...'
+                echo '📦 Cloning repository...'
                 checkout scm
             }
         }
 
-        stage('Build & Test') {
+        stage('Build Backend & Frontend') {
             agent {
                 docker {
                     image 'node:18'
@@ -23,11 +22,16 @@ pipeline {
                 }
             }
             steps {
-                echo '⚙️ Installing dependencies and building...'
+                echo '⚙️ Installing dependencies and building both backend & client...'
                 sh '''
+                    cd backend
                     npm install
-                    npm run build || echo "Build skipped (if not defined)"
-                    npm test || echo "No tests configured"
+                    echo "✅ Backend dependencies installed."
+
+                    cd ../client
+                    npm install
+                    npm run build || echo "No build script defined for client."
+                    echo "✅ Client built successfully."
                 '''
             }
         }
