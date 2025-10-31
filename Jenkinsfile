@@ -2,57 +2,58 @@ pipeline {
     agent any
 
     environment {
-        NODEJS_HOME = '/usr/local/bin/node'
-        PATH = "$NODEJS_HOME:$PATH"
+        APP_NAME = "connect4"
+        IMAGE_NAME = "connect4-app"
+        CONTAINER_NAME = "connect4-container"
     }
 
     stages {
         stage('Checkout Code') {
             steps {
-                echo 'Cloning Repository...'
+                echo '📦 Cloning Repository...'
                 checkout scm
             }
         }
 
-        stage('Build') {
+        stage('Build & Test') {
             agent {
-                docker { image 'node:18' }  // ✅ Run this stage inside Node.js container
+                docker {
+                    image 'node:18'
+                    args '-v /var/run/docker.sock:/var/run/docker.sock'
+                }
             }
             steps {
-                echo 'Building Project...'
-                sh 'npm install'
-                sh 'npm run build || echo "Build step skipped (if not defined)"'
+                echo '⚙️ Installing dependencies and building...'
+                sh '''
+                    npm install
+                    npm run build || echo "Build skipped (if not defined)"
+                    npm test || echo "No tests configured"
+                '''
             }
         }
 
-        stage('Unit Test') {
-            agent {
-                docker { image 'node:18' }
-            }
+        stage('Package Docker Image') {
             steps {
-                echo 'Running Tests...'
-                sh 'npm test || echo "No tests configured"'
+                echo '🐳 Building Docker image...'
+                sh 'docker build -t ${IMAGE_NAME}:latest .'
             }
         }
 
-        stage('Package') {
+        stage('Deploy Container') {
             steps {
-                echo 'Packaging Project...'
-                sh 'zip -r build.zip .'
+                echo '🚀 Deploying container...'
+                sh '''
+                    docker stop ${CONTAINER_NAME} || true
+                    docker rm ${CONTAINER_NAME} || true
+                    docker run -d -p 3000:3000 --name ${CONTAINER_NAME} ${IMAGE_NAME}:latest
+                '''
             }
         }
 
-        stage('SonarQube Analysis') {
-            when { expression { return false } }  // Optional for now
+        stage('SonarQube Analysis (Optional)') {
+            when { expression { return false } } // Disabled for now
             steps {
-                echo 'Running SonarQube (skipped for now)'
-            }
-        }
-
-        stage('Deploy') {
-            steps {
-                echo 'Deploying to server...'
-                // We'll add deployment commands later
+                echo '📊 Running SonarQube analysis (skipped for now)'
             }
         }
     }
@@ -62,7 +63,7 @@ pipeline {
             echo '✅ Pipeline completed successfully!'
         }
         failure {
-            echo '❌ Pipeline failed'
+            echo '❌ Pipeline failed!'
         }
     }
 }
