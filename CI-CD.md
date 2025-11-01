@@ -1,83 +1,104 @@
-🧭 Overview
-🎯 Objective
+# ⚙️ CI/CD Setup Guide — *Emittr: Real-Time Multiplayer Connect 4 Game*
 
-Automate the full development-to-deployment cycle for the Emittr project, including:
+This guide details the **Continuous Integration and Continuous Deployment (CI/CD)** pipeline for Emittr — ensuring automated builds, testing, and deployment using **Jenkins**, **Docker**, and **Docker Hub**.  
+It’s written for developers who want to replicate or extend the existing setup in their own environments.
 
-Code fetch from GitHub on push/merge.
+---
 
-Building Docker images for both frontend and backend.
+## 🧭 Overview
 
-Running unit/integration tests.
+### 🎯 Objective
 
-Pushing images to Docker Hub.
+Automate the full development-to-deployment lifecycle for Emittr, including:
 
-Automatically deploying containers to the target environment (local server, VPS, or cloud).
+1. Fetching code from GitHub upon push or merge.
+2. Building Docker images for frontend and backend.
+3. Running tests and validation.
+4. Pushing built images to Docker Hub.
+5. Automatically deploying containers to a production server or cloud instance.
 
-🧱 Core Stack
-Component	Purpose
-Jenkins	Automates build, test, and deployment pipelines.
-Docker	Containerizes services for consistency across environments.
-Docker Compose	Orchestrates multi-container setup (frontend, backend, PostgreSQL, Kafka).
-Docker Hub	Stores and distributes built images.
-GitHub Webhooks	Triggers Jenkins builds on code pushes.
-(Optional) Nginx	Reverse proxy for frontend/backend services in production.
-🧩 CI/CD Architecture
-                ┌───────────────┐
-                │   Developer   │
-                └──────┬────────┘
-                       │ git push
-                       ▼
-                ┌───────────────┐
-                │    GitHub     │
-                └──────┬────────┘
-                       │ Webhook Trigger
-                       ▼
-                ┌───────────────┐
-                │   Jenkins     │
-                ├───────────────┤
-                │ Build + Test  │
-                │ Docker Build  │
-                │ Push to Hub   │
-                └──────┬────────┘
-                       │ Deploy Script
-                       ▼
-                ┌───────────────┐
-                │  Production   │
-                │   Server/VPS  │
-                └───────────────┘
+---
 
-🔧 Prerequisites
+## 🧱 Core Stack
 
-Before configuring Jenkins and deployment, ensure you have:
+| Component | Purpose |
+|------------|----------|
+| **Jenkins** | Automates build, test, and deployment pipelines. |
+| **Docker** | Containerizes app services for consistent environments. |
+| **Docker Compose** | Orchestrates multi-container setup (frontend, backend, PostgreSQL, Kafka). |
+| **Docker Hub** | Stores and distributes built Docker images. |
+| **GitHub Webhooks** | Automatically triggers Jenkins builds on new pushes. |
+| **(Optional) Nginx** | Acts as a reverse proxy for production. |
 
-✅ Docker and Docker Compose installed
+---
 
-✅ Jenkins (LTS) installed and running
+## 🧩 CI/CD Architecture
 
-✅ GitHub repository connected
+pgsql
+Copy code
+            ┌───────────────┐
+            │   Developer   │
+            └──────┬────────┘
+                   │ git push
+                   ▼
+            ┌───────────────┐
+            │    GitHub     │
+            └──────┬────────┘
+                   │ Webhook Trigger
+                   ▼
+            ┌───────────────┐
+            │   Jenkins     │
+            ├───────────────┤
+            │ Build + Test  │
+            │ Docker Build  │
+            │ Push to Hub   │
+            └──────┬────────┘
+                   │ Deploy Script
+                   ▼
+            ┌───────────────┐
+            │  Production   │
+            │   Server/VPS  │
+            └───────────────┘
+yaml
+Copy code
 
-✅ Docker Hub account with repository access
+---
 
-✅ (Optional) VPS or cloud VM with ports open (5173 for frontend, 4000 for backend)
+## 🔧 Prerequisites
 
-🧱 Folder Structure for CI/CD
+Before setting up, ensure you have:
 
-You can maintain the following structure:
+- ✅ Docker and Docker Compose installed  
+- ✅ Jenkins (LTS) running (locally or on a server)  
+- ✅ GitHub repository connected  
+- ✅ Docker Hub account for storing images  
+- ✅ (Optional) VPS or cloud instance with open ports (`5173` for frontend, `4000` for backend)
+
+---
+
+## 📂 Folder Structure
 
 Emittr/
 ├── backend/
-│   ├── Dockerfile
-│   └── ...
+│ ├── Dockerfile
+│ └── ...
 ├── client/
-│   ├── Dockerfile
-│   └── ...
+│ ├── Dockerfile
+│ └── ...
 ├── docker-compose.yml
 ├── Jenkinsfile
 └── docs/
-    └── CI-CD_SETUP.md
+└── CI-CD_SETUP.md
 
-🐋 Step 1: Docker Setup (Backend + Frontend)
-Backend Dockerfile (backend/Dockerfile)
+yaml
+Copy code
+
+---
+
+## 🐋 Step 1: Docker Setup
+
+### Backend (`backend/Dockerfile`)
+```dockerfile
 FROM node:18-alpine
 WORKDIR /app
 COPY package*.json ./
@@ -85,8 +106,9 @@ RUN npm install --production
 COPY . .
 EXPOSE 4000
 CMD ["npm", "start"]
-
-Frontend Dockerfile (client/Dockerfile)
+Frontend (client/Dockerfile)
+dockerfile
+Copy code
 FROM node:18-alpine
 WORKDIR /app
 COPY package*.json ./
@@ -95,8 +117,9 @@ COPY . .
 RUN npm run build
 EXPOSE 5173
 CMD ["npm", "run", "preview"]
-
-⚙️ Step 2: Docker Compose for Multi-Service Setup
+⚙️ Step 2: Docker Compose Setup
+yaml
+Copy code
 version: "3.8"
 
 services:
@@ -137,23 +160,20 @@ services:
 
 volumes:
   db_data:
-
 🧰 Step 3: Jenkins Setup
-1️⃣ Run Jenkins in Docker
+Run Jenkins in Docker
+bash
+Copy code
 docker run -d --name jenkins \
   --restart=on-failure \
   -p 8080:8080 -p 50000:50000 \
   -v jenkins_home:/var/jenkins_home \
   -v /var/run/docker.sock:/var/run/docker.sock \
   jenkins/jenkins:lts-jdk17
-
-
 Access Jenkins at http://localhost:8080
-.
 
-2️⃣ Install Required Plugins
-
-In Manage Jenkins → Plugins, install:
+Install Required Plugins
+Go to Manage Jenkins → Plugins and install:
 
 Docker Pipeline
 
@@ -165,26 +185,26 @@ Blue Ocean
 
 Pipeline Utility Steps
 
-3️⃣ Connect Jenkins to GitHub
+Connect Jenkins to GitHub
+Create a GitHub Personal Access Token with repo + workflow permissions.
 
-Create a new GitHub Personal Access Token (with repo + workflow permissions).
-
-In Jenkins → Manage Credentials, add it under:
+Add it in Jenkins → Manage Credentials:
 
 Kind: Secret Text
 
 ID: github-token
 
-Create a webhook in your GitHub repo:
+Create a GitHub Webhook:
 
-URL: http://<YOUR_JENKINS_SERVER>:8080/github-webhook/
+URL: http://<JENKINS_SERVER>:8080/github-webhook/
 
-Events: “Just the push event”
+Event: “Push event”
 
-🧮 Step 4: Jenkinsfile (Declarative Pipeline)
+🧮 Step 4: Jenkinsfile Pipeline
+Create a Jenkinsfile in the root:
 
-Create a Jenkinsfile in the project root:
-
+groovy
+Copy code
 pipeline {
     agent any
 
@@ -256,45 +276,59 @@ pipeline {
         }
     }
 }
-
 🔐 Step 5: Managing Secrets
-
-Use Jenkins credentials store:
-
-Type	ID	Used For
+Type	ID	Purpose
 Secret Text	github-token	GitHub access
-Username + Password	dockerhub-password	Docker Hub login
-SSH Key	server-ssh-key	Remote server deploy access
-🚀 Step 6: Automated Deployment Flow
+Username + Password	dockerhub-password	Docker Hub authentication
+SSH Key	server-ssh-key	Server deployment access
 
-Developer pushes new code to GitHub.
+🚀 Step 6: Deployment Flow
+Developer pushes code to GitHub.
 
-GitHub webhook triggers Jenkins pipeline.
+GitHub webhook triggers Jenkins.
 
 Jenkins:
 
-Clones the repo
+Clones repo
 
-Builds Docker images for frontend & backend
+Builds frontend & backend images
 
-Pushes images to Docker Hub
+Pushes them to Docker Hub
 
 SSHs into the production server
 
-Pulls latest images and redeploys services via Docker Compose
+Pulls new images & redeploys via Docker Compose
 
-Users see the updated app live within minutes.
+The updated app is live within minutes.
 
 🧠 Optional Enhancements
 Enhancement	Description
-Testing Stage	Add unit/integration tests before Docker build.
-Staging Environment	Deploy to a staging VM before production.
-Slack Notifications	Send pipeline updates to a Slack channel.
-Grafana + Prometheus	Monitor app and container performance.
-Kubernetes Migration	Replace Compose with Helm charts for scaling.
-🧩 Troubleshooting Tips
-Issue	Possible Fix
-Jenkins can’t access Docker	Mount Docker socket -v /var/run/docker.sock:/var/run/docker.sock.
-Webhook not triggering	Verify Jenkins webhook URL and GitHub permissions.
-Docker Hub push fails	Check credentials ID and Docker Hub rate limits.
-SSH deploy fails	Ensure server public key is added to ~/.ssh/authorized_keys.
+Test Stage	Add automated test stage before Docker build.
+Staging Environment	Deploy builds to a staging VM first.
+Slack Notifications	Send build/deploy updates to a Slack channel.
+Grafana + Prometheus	Monitor service performance and health.
+Kubernetes	Migrate from Compose to Helm-based K8s setup for scalability.
+
+🧩 Troubleshooting
+Issue	Fix
+Jenkins can’t access Docker	Mount Docker socket: -v /var/run/docker.sock:/var/run/docker.sock
+Webhook not triggering	Recheck webhook URL and GitHub token.
+Docker Hub push fails	Validate Docker credentials or rate limits.
+SSH deploy fails	Ensure key is in server’s ~/.ssh/authorized_keys.
+
+🏁 Summary
+This pipeline delivers:
+
+✅ Continuous Integration — Build, test, validate
+✅ Continuous Delivery — Push stable images to registry
+✅ Continuous Deployment — Live redeploy on every push
+
+Emittr’s CI/CD ensures reliable updates, consistent environments, and faster development cycles.
+
+📚 Related Docs
+Main Project README
+
+Observability & Monitoring Setup (Coming Soon)
+
+Maintained by: Satyam
+License: MIT
